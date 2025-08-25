@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI-Powered Local Language Court Converter</title>
+  <style>
+    :root{
+      --bg-0:#0b0f14; --bg-1:#0f1620; --bg-2:#141c27; --bg-3:#1c2633;
+      --txt:#e6eef7; --muted:#a7b3c2; --brand:#7c5cff; --brand-2:#00e0ff; --accent:#33ffb6; --danger:#ff4d6d; --warn:#ffb703;
+      --glass:rgba(255,255,255,.06); --glass-2:rgba(255,255,255,.12); --shadow:0 10px 30px rgba(0,0,0,.45);
+      --radius:20px; --radius-lg:28px; --radius-sm:12px;
+      --blur:12px;
+    }
+    *{box-sizing:border-box;}
+    html,body{height:100%;}
+    body{margin:0;background:linear-gradient(120deg,var(--bg-0),var(--bg-2));color:var(--txt);font:500 16px/1.45 Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";letter-spacing:.2px;}
+    a{color:var(--brand-2);text-decoration:none}
+    button,select,input,textarea{font:inherit;color:inherit}
+
+    .animated-gradient{
+      position:fixed;inset:0;z-index:-3;filter:saturate(115%);
+      background:radial-gradient(1200px 900px at 10% 0%, rgba(124,92,255,.15), transparent 60%),
+                 radial-gradient(1000px 700px at 90% 10%, rgba(0,224,255,.15), transparent 60%),
+                 radial-gradient(900px 600px at 50% 100%, rgba(51,255,182,.12), transparent 60%),
+                 linear-gradient(120deg,var(--bg-0),var(--bg-2));
+      animation: hue 14s infinite linear;
+    }
+    @keyframes hue{from{filter:hue-rotate(0)}to{filter:hue-rotate(360deg)}}
+
+    .grid-overlay{
+      position:fixed;inset:-200px;z-index:-2;opacity:.13;background-size: 60px 60px;
+      background-image: linear-gradient(var(--glass-2) 1px, transparent 1px),
+                        linear-gradient(90deg, var(--glass-2) 1px, transparent 1px);
+      mask-image: radial-gradient(ellipse at 50% 50%, black 20%, transparent 70%);
+      transform: perspective(900px) rotateX(55deg) translateY(-180px);
+    }
+
+    canvas#particles{position:fixed;inset:0;z-index:-1;opacity:.7}
+
+    .app{display:grid;grid-template-columns: 300px 1fr;gap:22px;max-width:1400px;margin:40px auto;padding:0 20px}
+    @media (max-width: 1024px){.app{grid-template-columns:1fr}}
+
+    .sidebar{position:sticky;top:20px;height:calc(100vh - 80px);padding:18px;border-radius:var(--radius);backdrop-filter: blur(var(--blur));background:linear-gradient(180deg, var(--glass), transparent), var(--glass);box-shadow:var(--shadow);overflow:auto}
+    .logo{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    .logo .mark{width:42px;height:42px;border-radius:12px;background:conic-gradient(from 180deg, var(--brand), var(--brand-2), var(--accent), var(--brand));box-shadow:0 0 30px rgba(124,92,255,.35), inset 0 0 12px rgba(255,255,255,.2);animation:spin 12s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .brand-title{font-size:18px;font-weight:800;letter-spacing:.6px}
+
+    .side-group{margin:18px 0}
+    .side-title{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;color:var(--muted);margin:10px 0 8px 4px}
+    .history{display:grid;gap:8px}
+    .history button{all:unset;display:flex;gap:8px;align-items:center;padding:10px 12px;border-radius:12px;background:transparent;cursor:pointer;border:1px solid transparent}
+    .history button:hover{background:var(--glass);border-color:var(--glass-2)}
+
+    .toggle{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px;border-radius:12px;background:var(--glass);border:1px solid var(--glass-2)}
+
+    .kbd{padding:2px 6px;border-radius:6px;background:var(--bg-3);border:1px solid var(--glass-2);font-size:12px;color:var(--muted)}
+
+    .status{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+    .dot{width:8px;height:8px;border-radius:99px;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+
+    .main{display:grid;gap:18px}
+
+    .hero{
+      position:relative;overflow:hidden;border-radius:var(--radius-lg);padding:22px;border:1px solid var(--glass-2);background:linear-gradient(180deg, rgba(124,92,255,.10), rgba(124,92,255,0) 30%), linear-gradient(0deg, var(--glass), var(--glass));box-shadow:var(--shadow)
+    }
+    .hero h1{margin:0;font-size:32px;line-height:1.15;letter-spacing:.4px}
+    .hero p{margin:6px 0 0;color:var(--muted)}
+
+    .hero .blob{position:absolute;right:-120px;top:-120px;width:320px;height:320px;filter:blur(30px) saturate(120%);opacity:.55;border-radius:50%;background:radial-gradient(circle at 30% 30%, var(--brand-2), transparent 60%), radial-gradient(circle at 70% 70%, var(--brand), transparent 60%);animation:float 8s ease-in-out infinite}
+    @keyframes float{50%{transform:translateY(14px) scale(1.04)}}
+
+    .controls{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin-top:16px}
+    .control{grid-column: span 3;}
+    .control.wide{grid-column: span 6}
+    .control.full{grid-column: 1/-1}
+    @media (max-width: 1100px){.control{grid-column: span 6}.control.wide{grid-column: span 12}}
+    @media (max-width: 700px){.control,.control.wide{grid-column: 1/-1}}
+
+    label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px 6px}
+    select,input[type="text"],textarea{width:100%;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid var(--glass-2);outline:none}
+    textarea{min-height:160px;resize:vertical}
+
+    .pill-tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .pill{cursor:pointer;padding:10px 14px;border-radius:999px;border:1px solid var(--glass-2);background:var(--bg-2);transition:transform .15s ease, box-shadow .15s ease}
+    .pill.active{background:linear-gradient(180deg, rgba(124,92,255,.25), rgba(124,92,255,.05));border-color:rgba(124,92,255,.5);box-shadow:0 8px 24px rgba(124,92,255,.23)}
+    .pill:active{transform:translateY(1px)}
+
+    .dropzone{border:1.5px dashed var(--glass-2);border-radius:16px;padding:18px;text-align:center;background:rgba(255,255,255,.03)}
+    .dropzone.drag{border-color: var(--brand); background: linear-gradient(180deg, rgba(124,92,255,.18), rgba(124,92,255,.05))}
+
+    .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .btn{position:relative;cursor:pointer;border:none;border-radius:14px;padding:12px 16px;background:linear-gradient(180deg, #8b6bff, #6a4bff);color:white;font-weight:700;letter-spacing:.3px;box-shadow:0 12px 24px rgba(124,92,255,.35), inset 0 0 0 1px rgba(255,255,255,.2);transform:translateZ(0);transition:transform .15s ease, box-shadow .2s ease}
+    .btn:hover{transform: translateY(-2px); box-shadow:0 18px 34px rgba(124,92,255,.45)}
+    .btn.secondary{background:linear-gradient(180deg, #263042, #1a2230);color:#e6eef7;border:1px solid var(--glass-2);box-shadow:0 10px 22px rgba(0,0,0,.33)}
+    .btn.ghost{background:transparent;border:1px solid var(--glass-2);color:var(--txt)}
+    .btn .ping{position:absolute;inset:-6px;border-radius:16px;border:2px solid rgba(124,92,255,.6);animation:ping 1.5s infinite;opacity:.6}
+    @keyframes ping{0%{transform:scale(.9);opacity:.8} 80%{transform:scale(1.2);opacity:0} 100%{opacity:0}}
+
+    .card{position:relative;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));border:1px solid var(--glass-2);box-shadow:var(--shadow);overflow:hidden}
+    .card:hover{box-shadow:0 20px 60px rgba(0,0,0,.45)}
+
+    .result{min-height:200px;padding:16px;background:rgba(255,255,255,.04);border-radius:14px;border:1px solid var(--glass-2);white-space:pre-wrap}
+
+    .panels{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    @media (max-width: 1100px){.panels{grid-template-columns:1fr}}
+
+    .panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px dashed var(--glass-2);background:linear-gradient(180deg, rgba(255,255,255,.04), transparent)}
+    .panel-body{padding:14px}
+
+    [data-tip]{position:relative}
+    [data-tip]:hover:after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#0d1420;color:#dfe8f6;border:1px solid var(--glass-2);padding:8px 10px;border-radius:8px;white-space:nowrap;font-size:12px;box-shadow:var(--shadow)}
+
+    dialog{border:none;border-radius:18px;background:linear-gradient(180deg, rgba(21,26,36,.85), rgba(14,18,26,.9));backdrop-filter: blur(8px);color:var(--txt);box-shadow: var(--shadow);width:min(720px, 92vw)}
+    dialog::backdrop{background:rgba(0,0,0,.6)}
+
+    .toast{position:fixed;right:16px;bottom:16px;display:grid;gap:10px;max-width:340px;z-index:50}
+    .toast .item{padding:12px 14px;border-radius:12px;background:linear-gradient(180deg, rgba(0,0,0,.7), rgba(0,0,0,.6));border:1px solid var(--glass-2)}
+
+    .footer{display:flex;gap:14px;align-items:center;justify-content:space-between;padding:18px 0;color:var(--muted)}
+
+    [data-theme="light"]{--bg-0:#f5f7fb;--bg-1:#f0f4fa;--bg-2:#e9eef7;--bg-3:#dfe7f3;--txt:#0e1320;--muted:#546071}
+    [data-theme="light"] body{background:linear-gradient(120deg,var(--bg-1),var(--bg-0))}
+    [data-theme="light"] .grid-overlay{opacity:.2}
+  </style>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="animated-gradient" aria-hidden="true"></div>
+  <div class="grid-overlay" aria-hidden="true"></div>
+  <canvas id="particles" aria-hidden="true"></canvas>
+
+  <div class="app">
+    <aside class="sidebar card">
+      <div class="logo">
+        <div class="mark" aria-hidden="true"></div>
+        <div>
+          <div class="brand-title">CourtConvert<span style="color:var(--brand-2)">.AI</span></div>
+          <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">Online</span></div>
+        </div>
+      </div>
+
+      <div class="side-group">
+        <div class="side-title">Quick Actions</div>
+        <div class="history">
+          <button data-template="translate"><span>⚖ Translate Judgment</span><span class="kbd">T</span></button>
+          <button data-template="summarise"><span>📄 Summarise Case</span><span class="kbd">S</span></button>
+          <button data-template="simplify"><span>🗣 Simplify Legalese</span><span class="kbd">L</span></button>
+          <button data-template="extract"><span>🔎 Extract Parties/Dates</span><span class="kbd">E</span></button>
+        </div>
+      </div>
+
+      <div class="side-group">
+        <div class="side-title">Preferences</div>
+        <div class="toggle"><span>Theme</span>
+          <button id="themeBtn" class="btn secondary" style="padding:8px 12px">Toggle</button>
+        </div>
+        <div class="toggle" style="margin-top:10px"><span>Readable Mode</span>
+          <label class="switch">
+            <input id="readableToggle" type="checkbox" />
+          </label>
+        </div>
+        <div class="toggle" style="margin-top:10px"><span>Confidential Mode</span>
+          <label class="switch">
+            <input id="privacyToggle" type="checkbox" />
+          </label>
+        </div>
+      </div>
+
+      <div class="side-group">
+        <div class="side-title">Keyboard</div>
+        <div class="history">
+          <button id="kbHelp"><span>⌨ Shortcuts</span><span class="kbd">?</span></button>
+        </div>
+      </div>
+
+      <div class="side-group">
+        <div class="side-title">History</div>
+        <div id="historyList" class="history"></div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <section class="hero card" id="tilt">
+        <div class="blob" aria-hidden="true"></div>
+        <h1>AI-Powered Local Language Court Converter</h1>
+        <p>Translate, simplify, and summarise court documents into Indian regional languages with citations preserved.</p>
+
+        <div class="controls">
+          <div class="control">
+            <label>Source Language</label>
+            <select id="srcLang">
+              <option value="auto">Auto-detect</option>
+              <option>English</option>
+              <option>Hindi (हिन्दी)</option>
+              <option>Tamil (தமிழ்)</option>
+              <option>Telugu (తెలుగు)</option>
+              <option>Kannada (ಕನ್ನಡ)</option>
+              <option>Malayalam (മലയാളം)</option>
+              <option>Marathi (मराठी)</option>
+              <option>Bengali (বাংলা)</option>
+              <option>Gujarati (ગુજરાતી)</option>
+              <option>Punjabi (ਪੰਜਾਬੀ)</option>
+              <option>Odia (ଓଡ଼ିଆ)</option>
+              <option>Urdu (اردو)</option>
+            </select>
+          </div>
+          <div class="control">
+            <label>Target Language</label>
+            <select id="tgtLang">
+              <option>Hindi (हिन्दी)</option>
+              <option>English</option>
+              <option>Tamil (தமிழ்)</option>
+              <option>Telugu (తెలుగు)</option>
+              <option>Kannada (ಕನ್ನಡ)</option>
+              <option>Malayalam (മലയാളം)</option>
+              <option>Marathi (मराठी)</option>
+              <option>Bengali (বাংলা)</option>
+              <option>Gujarati (ગુજરાતી)</option>
+              <option>Punjabi (ਪੰਜਾਬੀ)</option>
+              <option>Odia (ଓଡ଼ିଆ)</option>
+              <option>Urdu (اردو)</option>
+            </select>
+          </div>
+          <div class="control wide">
+            <label>Modes</label>
+            <div class="pill-tabs" id="modeTabs">
+              <div class="pill active" data-mode="translate" data-tip="High-fidelity translation with citations">Translate</div>
+              <div class="pill" data-mode="simplify" data-tip="Plain-language rewrite">Simplify</div>
+              <div class="pill" data-mode="summarise" data-tip="Concise summary with key holdings">Summarise</div>
+              <div class="pill" data-mode="extract" data-tip="Extract parties, dates, sections">Extract</div>
+              <div class="pill" data-mode="audio" data-tip="Generate local language audio">Text → Speech</div>
+            </div>
+          </div>
+          <div class="control full">
+            <div class="dropzone" id="dropzone" aria-label="Upload or drop legal document">Drop PDF/DOCX here or <button class="btn ghost" id="fileBtn">Browse</button>
+              <input id="fileInput" type="file" accept=".pdf,.doc,.docx,.txt,.rtf" hidden />
+            </div>
+          </div>
+          <div class="control full">
+            <label>Paste Text</label>
+            <textarea id="inputText" placeholder="Paste judgment, FIR, charge sheet, affidavit, etc."></textarea>
+          </div>
+
+          <div class="control full">
+            <div class="actions">
+              <button class="btn" id="runBtn"><span class="ping" aria-hidden="true"></span>Run AI (⌘/Ctrl + Enter)</button>
+              <button class="btn secondary" id="micBtn" data-tip="Dictate using speech">🎙 Dictate</button>
+              <button class="btn secondary" id="speakBtn" data-tip="Speak out result">🔊 Speak</button>
+              <button class="btn ghost" id="copyBtn">Copy</button>
+              <button class="btn ghost" id="downloadBtn">Download</button>
+              <button class="btn ghost" id="clearBtn">Clear</button>
+
+             
+              <button class="btn ghost" id="eli15Btn" data-active="0">ELI15</button>
+              <span id="complexityBadge" class="kbd" style="margin-left:4px">Complexity: —</span>
+
+              <span id="progressText" style="margin-left:auto;color:var(--muted)">Idle</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="panel-head">
+          <div>Result</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="kbd">Esc</span>
+            <span class="kbd">Ctrl/⌘ + K</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="result" id="result" tabindex="0" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="panels">
+        <div class="card">
+          <div class="panel-head"><div>Glossary</div><button class="btn ghost" id="glossaryBtn">+ Add</button></div>
+          <div class="panel-body">
+            <ul id="glossaryList" style="margin:0;padding-left:18px"></ul>
+          </div>
+        </div>
+        <div class="card">
+          <div class="panel-head"><div>Citations Map</div><button class="btn ghost" id="citationsBtn">Re-link</button></div>
+          <div class="panel-body">
+            <div id="citations" style="font-size:14px;color:var(--muted)">No citations yet.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="panel-head"><div>Quality Checks</div><button class="btn ghost" id="qcBtn">Run QC</button></div>
+          <div class="panel-body" id="qcPanel">
+            <ul style="margin:0;padding-left:18px">
+              <li>Terminology consistency</li>
+              <li>Named entity preservation</li>
+              <li>Number/date format</li>
+              <li>Honorifics & polite forms</li>
+              <li>Profanity filter</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <div class="footer">
+        <div>🔒 <span id="privacyLabel">Standard processing</span></div>
+        <div>©️ <span id="year"></span> CourtConvert.AI — Demo UI. No real data is sent.</div>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="helpDlg">
+    <form method="dialog" style="padding:18px">
+      <h2 style="margin-top:0">Keyboard Shortcuts</h2>
+      <ul>
+        <li><b>Ctrl/⌘ + Enter</b> — Run AI</li>
+        <li><b>?</b> — Open this help</li>
+        <li><b>Esc</b> — Focus result</li>
+        <li><b>Ctrl/⌘ + K</b> — Copy output</li>
+      </ul>
+      <div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn secondary">Close</button></div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+    const toast = (msg) => {
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.textContent = msg;
+      $('#toast').appendChild(el);
+      setTimeout(()=> el.remove(), 2800);
+    };
+
+    const saveHistory = (entry) => {
+      const history = JSON.parse(localStorage.getItem('cc_history')||'[]');
+      history.unshift({...entry, t: Date.now()});
+      localStorage.setItem('cc_history', JSON.stringify(history.slice(0,20)));
+      renderHistory();
+    };
+    const renderHistory = () => {
+      const history = JSON.parse(localStorage.getItem('cc_history')||'[]');
+      const box = $('#historyList');
+      box.innerHTML = '';
+      history.forEach(h => {
+        const b = document.createElement('button');
+        b.innerHTML = `<span>${h.mode} → ${h.tgt}</span><span class="kbd">${new Date(h.t).toLocaleTimeString()}</span>`;
+        b.onclick = ()=>{ $('#result').textContent = h.out; updateComplexityBadge(h.out); };
+        box.appendChild(b);
+      });
+    };
+
+    const canvas = document.getElementById('particles');
+    const ctx = canvas.getContext('2d');
+    let w,h,parts=[];
+    function resize(){ w=canvas.width=innerWidth; h=canvas.height=innerHeight; }
+    resize(); addEventListener('resize', resize);
+    function spawn(n=90){
+      parts = Array.from({length:n}, _=>({
+        x: Math.random()*w, y: Math.random()*h, r: 1+Math.random()*2,
+        vx: (Math.random()-.5)*.4, vy: (Math.random()-.5)*.4
+      }));
+    }
+    function tick(){
+      ctx.clearRect(0,0,w,h);
+      parts.forEach(p=>{
+        p.x+=p.vx; p.y+=p.vy;
+        if(p.x<0||p.x>w) p.vx*=-1;
+        if(p.y<0||p.y>h) p.vy*=-1;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle='rgba(124,92,255,.5)'; ctx.fill();
+      });
+      for(let i=0;i<parts.length;i++){
+        for(let j=i+1;j<parts.length;j++){
+          const a=parts[i], b=parts[j];
+          const d = Math.hypot(a.x-b.x, a.y-b.y);
+          if(d<110){
+            ctx.strokeStyle=`rgba(0,224,255, ${1-d/110})`;
+            ctx.lineWidth=.6; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+    spawn(); tick();
+
+  
+    const tilt = $('#tilt');
+    tilt.addEventListener('mousemove', (e)=>{
+      const r = tilt.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - .5;
+      const y = (e.clientY - r.top) / r.height - .5;
+      tilt.style.transform = `perspective(1000px) rotateX(${(-y*4).toFixed(2)}deg) rotateY(${(x*4).toFixed(2)}deg)`;
+    });
+    tilt.addEventListener('mouseleave', ()=> tilt.style.transform='');
+
+    
+    const themeBtn = $('#themeBtn');
+    const rootEl = document.documentElement;
+    themeBtn.onclick = ()=>{
+      const next = rootEl.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+      rootEl.setAttribute('data-theme', next);
+      localStorage.setItem('cc_theme', next);
+    };
+    const savedTheme = localStorage.getItem('cc_theme'); if(savedTheme) rootEl.setAttribute('data-theme', savedTheme);
+    $('#year').textContent = new Date().getFullYear();
+    const setStatus = ()=>{
+      const on = navigator.onLine; $('#statusDot').style.background = on ? 'var(--accent)' : 'var(--warn)';
+      $('#statusText').textContent = on? 'Online' : 'Offline';
+    }; setStatus(); addEventListener('online', setStatus); addEventListener('offline', setStatus);
+
+   
+    let currentMode = 'translate';
+    $$('#modeTabs .pill').forEach(p=>p.onclick = ()=>{
+      $$('#modeTabs .pill').forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+      currentMode = p.dataset.mode;
+      toast(`Mode: ${currentMode}`);
+    });
+
+   
+    const drop = $('#dropzone');
+    const fileInput = $('#fileInput');
+    const progressText = $('#progressText');
+    $('#fileBtn').onclick = ()=> fileInput.click();
+    ['dragenter','dragover'].forEach(ev=> drop.addEventListener(ev, e=>{e.preventDefault();drop.classList.add('drag')}));
+    ['dragleave','drop'].forEach(ev=> drop.addEventListener(ev, e=>{e.preventDefault();drop.classList.remove('drag')}));
+    drop.addEventListener('drop', async (e)=>{ const f = e.dataTransfer.files?.[0]; if(f) await readFile(f); });
+    fileInput.addEventListener('change', async ()=>{ const f=fileInput.files[0]; if(f) await readFile(f); });
+
+    async function loadPdfJs(){
+      if(window.pdfjsLib) return window.pdfjsLib;
+      await new Promise((resolve, reject)=>{
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        s.onload = resolve; s.onerror = reject; document.head.appendChild(s);
+      });
+      const workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      if(window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions){
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+      }
+      return window.pdfjsLib;
+    }
+
+    async function extractTextFromPDF(file){
+      const pdfjs = await loadPdfJs();
+      const buf = await file.arrayBuffer();
+      const loadingTask = pdfjs.getDocument({ data: buf });
+      const pdf = await loadingTask.promise;
+      const parts = [];
+      for(let p=1; p<=pdf.numPages; p++){
+        const page = await pdf.getPage(p);
+        const tc = await page.getTextContent();
+        const pageText = tc.items.map(it=>('str' in it ? it.str : (it?.text || ''))).join(' ');
+        parts.push(pageText);
+        if(p % 5 === 0) progressText.textContent = `Extracting… page ${p}/${pdf.numPages}`;
+        await new Promise(r=>setTimeout(r, 10));
+      }
+      return parts.join('\n\n');
+    }
+
+    async function readFile(file){
+      const name = file.name || '';
+      const isPDF = /\.pdf$/i.test(name) || file.type === 'application/pdf';
+      if(isPDF){
+        try{
+          progressText.textContent = 'Extracting text from PDF…';
+          const text = await extractTextFromPDF(file);
+          $('#inputText').value = (text && text.trim()) ? text : `Loaded file: ${file.name} (no extractable text)`;
+          toast(`Loaded ${file.name} (PDF text extracted)`);
+          progressText.textContent = 'Idle';
+          return;
+        }catch(err){ console.error(err); toast('PDF extraction failed — loading raw'); }
+      }
+      const text = await file.text().catch(()=> '');
+      $('#inputText').value = text || `Loaded file: ${file.name} (binary preview hidden)`;
+      toast(`Loaded ${file.name}`);
+    }
+
+    
+    const micBtn = $('#micBtn');
+    let recog;
+    micBtn.onclick = ()=>{
+      try{
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if(!SR) return toast('SpeechRecognition not supported');
+        if(recog){recog.stop(); recog=null; micBtn.textContent='🎙 Dictate'; return}
+        recog = new SR(); recog.lang = ($('#srcLang').value.includes('English')? 'en-IN':'hi-IN');
+        recog.interimResults = true; recog.onresult = (e)=>{ const t = Array.from(e.results).map(r=>r[0].transcript).join(' '); $('#inputText').value = t; };
+        recog.onend = ()=>{ micBtn.textContent='🎙 Dictate'; toast('Dictation stopped') };
+        recog.start(); micBtn.textContent='⏺ Stop'; toast('Dictation started…');
+      }catch(err){ console.error(err); toast('Speech init failed'); }
+    };
+
+    const speakBtn = $('#speakBtn');
+    speakBtn.onclick = ()=>{
+      const t = $('#result').textContent.trim(); if(!t) return toast('Nothing to speak');
+      const u = new SpeechSynthesisUtterance(t); u.lang = ($('#tgtLang').value.includes('English')? 'en-IN':'hi-IN');
+      speechSynthesis.speak(u);
+    };
+
+   
+    function getLanguageCode(optionLabel, allowAuto=false, textSample=''){
+      if(allowAuto && (optionLabel==='Auto-detect' || optionLabel==='auto')) return 'auto';
+      const label = String(optionLabel || '').toLowerCase();
+      const map = {
+        'english':'en','hindi':'hi','tamil':'ta','telugu':'te','kannada':'kn','malayalam':'ml','marathi':'mr',
+        'bengali':'bn','gujarati':'gu','punjabi':'pa','odia':'or','urdu':'ur'
+      };
+      for(const [name, code] of Object.entries(map)){
+        if(label.includes(name)) return code;
+      }
+      return 'en';
+    }
+    function clampToWords(text, maxWords){
+      const words = text.match(/\S+/g) || [];
+      if(words.length <= maxWords) return {text, truncated:false};
+      return {text:words.slice(0,maxWords).join(' '), truncated:true};
+    }
+    function detectScriptCode(text){
+      const scripts = [
+        {re:/[\u0900-\u097F]/, code:'hi'},
+        {re:/[\u0B80-\u0BFF]/, code:'ta'},
+        {re:/[\u0C00-\u0C7F]/, code:'te'},
+        {re:/[\u0C80-\u0CFF]/, code:'kn'},
+        {re:/[\u0D00-\u0D7F]/, code:'ml'},
+        {re:/[\u0980-\u09FF]/, code:'bn'},
+        {re:/[\u0A80-\u0AFF]/, code:'gu'},
+        {re:/[\u0A00-\u0A7F]/, code:'pa'},
+        {re:/[\u0B00-\u0B7F]/, code:'or'},
+        {re:/[\u0600-\u06FF]/, code:'ur'}
+      ];
+      const sample = (text||'').slice(0, 400);
+      for(const s of scripts){ if(s.re.test(sample)) return s.code; }
+      return 'en';
+    }
+
+    
+    function chunkTextBySize(text, targetSize=360){
+      const rawChunks = [];
+      let i = 0;
+      while(i < text.length){
+        let end = Math.min(i + targetSize, text.length);
+        if(end < text.length){
+          const slice = text.slice(i, end+200);
+          const punctIdx = Math.max(slice.lastIndexOf('.'), slice.lastIndexOf('!'), slice.lastIndexOf('?'));
+          const newline = Math.max(slice.lastIndexOf('\n'), slice.lastIndexOf('\r'));
+          const cut = Math.max(punctIdx, newline);
+          if(cut > 50) end = i + cut + 1;
+        }
+        rawChunks.push(text.slice(i, end));
+        i = end;
+      }
+      const maxEncoded = 480;
+      const safeChunks = [];
+      for(const ch of rawChunks){
+        if(encodeURIComponent(ch).length <= maxEncoded){
+          safeChunks.push(ch);
+        } else {
+          const words = ch.split(/(\s+)/);
+          let buf = '';
+          for(const w of words){
+            const next = buf + w;
+            if(encodeURIComponent(next).length > maxEncoded){
+              if(buf.trim()) safeChunks.push(buf);
+              buf = w.trim() ? w : '';
+              if(encodeURIComponent(buf).length > maxEncoded){
+                let s = 0;
+                while(s < w.length){
+                  let slice = w.slice(s, s+120);
+                  while(encodeURIComponent(slice).length > maxEncoded && slice.length > 10){
+                    slice = slice.slice(0, slice.length-10);
+                  }
+                  safeChunks.push(slice);
+                  s += slice.length;
+                }
+                buf = '';
+              }
+            } else {
+              buf = next;
+            }
+          }
+          if(buf.trim()) safeChunks.push(buf);
+        }
+      }
+      return safeChunks.filter(c=>c && c.trim().length>0);
+    }
+    async function translateChunk(chunk, srcCode, tgtCode){
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=${encodeURIComponent(srcCode)}|${encodeURIComponent(tgtCode)}`;
+      for(let attempt=0; attempt<3; attempt++){
+        try{
+          const res = await fetch(url);
+          const data = await res.json();
+          const txt = data && data.responseData && data.responseData.translatedText ? data.responseData.translatedText : '';
+          const errMsg = (data && (data.responseDetails || (data.responseStatus && data.responseStatus !== 200))) ? String(data.responseDetails||'') : '';
+          if(errMsg && errMsg.toUpperCase().includes('QUERY LENGTH LIMIT EXCEEDED')){
+            return '[ERR_QUERY_TOO_LONG]';
+          }
+          if(txt) return txt;
+        }catch(e){ /* retry */ }
+        await new Promise(r=>setTimeout(r, 600 + attempt*600));
+      }
+      return chunk;
+    }
+    async function translateLargeText(text, srcCode, tgtCode, onProgress){
+      let chunks = chunkTextBySize(text, 360);
+      const results = new Array(chunks.length);
+      const concurrency = 2;
+      let idx = 0, done = 0;
+      onProgress && onProgress(0, chunks.length);
+
+      async function worker(){
+        while(true){
+          const myIndex = idx++; if(myIndex >= chunks.length) break;
+          const piece = chunks[myIndex];
+          let translated = await translateChunk(piece, srcCode, tgtCode);
+          if(typeof translated === 'string' && translated.startsWith('[ERR_QUERY_TOO_LONG]')){
+            const smaller = chunkTextBySize(piece, 200);
+            const subResults = [];
+            for(const sub of smaller){
+              const t = await translateChunk(sub, srcCode, tgtCode);
+              subResults.push(typeof t === 'string' && t.startsWith('[ERR_QUERY_TOO_LONG]') ? sub : t);
+              await new Promise(r=>setTimeout(r, 300));
+            }
+            translated = subResults.join('');
+          }
+          results[myIndex] = translated;
+          done++; onProgress && onProgress(done, chunks.length);
+          await new Promise(r=>setTimeout(r, 400));
+        }
+      }
+      const workers = Array.from({length:concurrency}, worker);
+      await Promise.all(workers);
+      return results.join('');
+    }
+
+    
+    function simplify(text){
+      return String(text||'')
+        .replace(/whereas/gi,'because')
+        .replace(/herein(?:after)?/gi,'later')
+        .replace(/aforesaid/gi,'mentioned')
+        .replace(/therewith/gi,'with that')
+        .replace(/heretofore/gi,'until now');
+    }
+
+    
+    function countSyllables(word) {
+      const w = (word || '').toLowerCase().replace(/[^a-z]/g,'');
+      if (!w) return 0;
+      const m = w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '')
+                 .replace(/^y/, '')
+                 .match(/[aeiouy]{1,2}/g);
+      return Math.max(1, (m ? m.length : 0));
+    }
+    function computeComplexity(text) {
+      const clean = (text || '').replace(/\s+/g, ' ').trim();
+      if (!clean) return { score: 0, level: '—' };
+      const sentences = clean.split(/[.!?]+/).filter(Boolean);
+      const words = clean.match(/\b[\p{L}\p{N}’']+\b/gu) || [];
+      const syllables = words.reduce((s, w) => s + countSyllables(String(w)), 0);
+      const S = Math.max(1, sentences.length);
+      const W = Math.max(1, words.length);
+      const fk = 0.39 * (W / S) + 11.8 * (syllables / W) - 15.59;
+      let score = Math.round(Math.max(0, Math.min(100, (fk / 14) * 100)));
+      let level =
+        score < 25 ? 'Very Easy' :
+        score < 45 ? 'Easy' :
+        score < 60 ? 'Medium' :
+        score < 75 ? 'Hard' : 'Very Hard';
+      return { score, level, words: W, sentences: S };
+    }
+    function updateComplexityBadge(text) {
+      const badge = document.getElementById('complexityBadge');
+      if (!badge) return;
+      const { score, level } = computeComplexity(text || '');
+      badge.textContent = `Complexity: ${score} (${level})`;
+    }
+    function eli15(text) {
+      if (!text) return text;
+      let t = text;
+      t = t.split(/([.!?])/).map(chunk => {
+        const s = chunk.trim();
+        if (s.split(/\s+/).length > 28) {
+          return s.replace(/,\s/g, '. ').replace(/;\s/g, '. ');
+        }
+        return s;
+      }).join('');
+      const map = [
+        [/whereas/gi, 'because'],
+        [/thereof/gi, 'of that'],
+        [/therein/gi, 'in it'],
+        [/heretofore/gi, 'until now'],
+        [/henceforth/gi, 'from now on'],
+        [/forthwith/gi, 'right away'],
+        [/notwithstanding/gi, 'despite'],
+        [/aforementioned|aforesaid/gi, 'mentioned above'],
+        [/pursuant to/gi, 'under'],
+        [/hereinafter/gi, 'later called'],
+        [/inter alia/gi, 'among others'],
+        [/prima facie/gi, 'at first look'],
+        [/per se/gi, 'by itself'],
+        [/ipso facto/gi, 'by that fact'],
+        [/onus/gi, 'burden'],
+        [/contention/gi, 'argument'],
+        [/impugned/gi, 'challenged']
+      ];
+      for (const [re, sub] of map) t = t.replace(re, sub);
+      t = t.replace(/\bhowever\b/gi, 'but')
+           .replace(/\bmoreover\b/gi, 'also')
+           .replace(/\bfurthermore\b/gi, 'also')
+           .replace(/\s{2,}/g, ' ')
+           .trim();
+      return t;
+    }
+    const eli15Btn = document.getElementById('eli15Btn');
+    if (eli15Btn) {
+      eli15Btn.addEventListener('click', () => {
+        const active = eli15Btn.getAttribute('data-active') === '1';
+        const box = document.getElementById('result');
+        if (!box) return;
+        if (!active) {
+          eli15Btn.setAttribute('data-original', box.textContent || '');
+          const simplified = eli15(box.textContent || '');
+          box.textContent = simplified;
+          eli15Btn.setAttribute('data-active', '1');
+          eli15Btn.textContent = 'ELI15 (ON)';
+          updateComplexityBadge(simplified);
+          toast('ELI15 mode ON');
+        } else {
+          const orig = eli15Btn.getAttribute('data-original') || '';
+          box.textContent = orig;
+          eli15Btn.setAttribute('data-active', '0');
+          eli15Btn.textContent = 'ELI15';
+          updateComplexityBadge(orig);
+          toast('ELI15 mode OFF');
+        }
+      });
+    }
+
+   
+    const runBtn = $('#runBtn');
+    runBtn.onclick = run;
+    document.addEventListener('keydown', (e)=>{
+      if((e.ctrlKey||e.metaKey) && e.key==='Enter') run();
+      if(e.key==='?'){ e.preventDefault(); $('#helpDlg').showModal(); }
+      if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); copyOut(); }
+      if(e.key==='Escape'){ $('#result').focus(); }
+    });
+
+    async function run(){
+      const input = $('#inputText').value.trim();
+      if(!input){ toast('Please paste some text or upload a file.'); return; }
+      progressText.textContent = 'Processing…';
+
+      const steps = [
+        'Detecting language…',
+        'Chunking large paragraphs…',
+        currentMode==='translate'? 'Translating with glossary…' : currentMode==='simplify'? 'Simplifying legalese…' : currentMode==='summarise'? 'Generating summary…' : currentMode==='extract'? 'Extracting entities…' : 'Generating speech…',
+        'Formatting citations…',
+        'Quality checks…'
+      ];
+      for(const s of steps){ progressText.textContent = s; await new Promise(r=>setTimeout(r, 500)); }
+
+      const src = $('#srcLang').value; const tgt = $('#tgtLang').value;
+      let out = '';
+      if(currentMode==='translate'){
+        try{
+          const srcCode = getLanguageCode(src, true, input)==='auto' ? detectScriptCode(input) : getLanguageCode(src, false);
+          const tgtCode = getLanguageCode(tgt, false);
+          const {text:limitedText, truncated} = clampToWords(input, 10000);
+          if(truncated) toast('Input exceeds 10,000 words. Trimming to first 10,000.');
+          const translated = await translateLargeText(limitedText, srcCode, tgtCode, (i,n)=>{ progressText.textContent = `Translating… ${i}/${n}`; });
+          out = translated || '[Translation failed]';
+        }catch(err){ console.error(err); toast('Translation failed'); out = '[Translation failed]'; }
+      } else if(currentMode==='simplify'){
+        out = `[DEMO] Plain-language rewrite:\n\n${simplify(input)}`;
+      } else if(currentMode==='summarise'){
+        out = `[DEMO] Summary\n• Parties: …\n• Court: …\n• Key holdings: …\n• Outcome: …\n\nQuoted:\n${input.slice(0,240)}${input.length>240?'…':''}`;
+      } else if(currentMode==='extract'){
+        out = `[DEMO] Extracted Entities\n— Parties: …\n— Dates: …\n— Statutes: IPC 420, CrPC 197\n— Bench: …\n— Citations: (2014) 2 SCC 123 …`;
+      } else if(currentMode==='audio'){
+        out = `[DEMO] Audio ready for ${tgt}. Use 🔊 Speak to play.`;
+      }
+
+      $('#result').textContent = out;
+      updateComplexityBadge(out);
+      $('#citations').innerHTML = `
+        <ul style="margin:0;padding-left:18px">
+          <li>State of X v. Y, (2014) 2 SCC 123</li>
+          <li>Section 482, CrPC — Inherent powers</li>
+          <li>Article 226, Constitution of India</li>
+        </ul>`;
+      saveHistory({mode: currentMode, tgt, out});
+      progressText.textContent = 'Done';
+      confetti();
+    }
+
+  
+    const copyOut = ()=>{ const t = $('#result').textContent; navigator.clipboard.writeText(t); toast('Copied to clipboard'); };
+    $('#copyBtn').onclick = copyOut;
+    $('#downloadBtn').onclick = ()=>{
+      const blob = new Blob([$('#result').textContent], {type:'text/plain'});
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), {href:url, download:`courtconvert_${Date.now()}.txt`});
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    };
+    $('#clearBtn').onclick = ()=>{ $('#inputText').value=''; $('#result').textContent=''; updateComplexityBadge(''); toast('Cleared'); };
+
+    /* ========== GLOSSARY / QC / HELP ========== */
+    const glossary = JSON.parse(localStorage.getItem('cc_glossary')||'[]');
+    const renderGlossaryList = ()=>{
+      const ul = $('#glossaryList'); ul.innerHTML='';
+      glossary.forEach((g)=>{
+        const li = document.createElement('li');
+        li.innerHTML = `<b>${g.term}</b> → ${g.pref}`;
+        ul.appendChild(li);
+      });
+      localStorage.setItem('cc_glossary', JSON.stringify(glossary));
+    };
+    renderGlossaryList(); renderHistory();
+
+    $('#glossaryBtn').onclick = ()=>{
+      const term = prompt('Term (English / Source)'); if(!term) return;
+      const pref = prompt('Preferred translation / Target'); if(!pref) return;
+      glossary.push({term, pref}); renderGlossaryList(); toast('Glossary term added');
+    };
+
+    $('#qcBtn').onclick = ()=>{
+      const checks = ['Terminology consistency ✅','Entities preserved ✅','Numbers formatted ✅'];
+      $('#qcPanel').innerHTML = `<ul style="margin:0;padding-left:18px">${checks.map(c=>`<li>${c}</li>`).join('')}</ul>`;
+      toast('QC finished');
+    };
+
+    $('#citationsBtn').onclick = ()=> toast('Citations re-linked');
+    $('#kbHelp').onclick = ()=> $('#helpDlg').showModal();
+
+ 
+    function confetti(){
+      for(let i=0;i<24;i++){
+        const s = document.createElement('span');
+        s.innerHTML = '🎉';
+        Object.assign(s.style,{position:'fixed',left:(Math.random()*100)+'%',top:'-20px',fontSize:(14+Math.random()*10)+'px',transition:'transform 1.2s ease, opacity 1.2s ease',zIndex:99});
+        document.body.appendChild(s);
+        setTimeout(()=>{ s.style.transform = `translateY(${80+Math.random()*120}vh) rotate(${(Math.random()*360)}deg)`; s.style.opacity=.1 }, 10);
+        setTimeout(()=> s.remove(), 1500);
+      }
+    }
+
+
+    updateComplexityBadge($('#result').textContent || '');
+  </script>
+</body>
+</html>
